@@ -12,6 +12,8 @@ __pycache__
 build
 dist
 data
+models
+images
 tmp
 .idea
 .ipynb_checkpoints
