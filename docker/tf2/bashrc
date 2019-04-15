@@ -1,0 +1,42 @@
+# /etc/bash.bashrc for the IML workshop tutorial 2019
+# this file is an adaption of the original file in the tensorflor/tensorflow image
+
+export PS1="\[\e[32m\]iml-tutorial\[\e[m\] \[\e[37m\]\w\[\e[m\] > "
+export TERM=xterm-256color
+alias run_tutorial="jupyter notebook --ip 0.0.0.0 --port \$NB_PORT --no-browser --NotebookApp.custom_display_url=http://localhost:\$NB_PORT"
+
+echo -e "\e[1;31m"
+cat <<IML
+_____________  ________       ________      _____             _____       ______
+____  _/__   |/  /__  /       ___  __/___  ___  /________________(_)_____ ___  /
+ __  / __  /|_/ /__  /        __  /  _  / / /  __/  __ \_  ___/_  /_  __  /_  /
+__/ /  _  /  / / _  /___      _  /   / /_/ // /_ / /_/ /  /   _  / / /_/ /_  /
+/___/  /_/  /_/  /_____/      /_/    \____/ \__/ \____//_/    /_/  \____/ /_/
+
+IML
+
+if [ "$EUID" = "0" ]; then
+    echo -e "\e[0;33m"
+    cat <<WARN
+WARNING: You are running this container as root, which can cause new files in
+mounted volumes to be created as the root user on your host machine.
+To avoid this, run the container by specifying your user's userid:
+$ docker run -u \$(id -u):\$(id -g) args...
+WARN
+
+else
+    echo -e "\e[0;37m"
+    cat <<EXPL
+You are running this container as user with ID $(id -u) and group $(id -g),
+which should map to the ID and group for your user on the Docker host. Great!
+EXPL
+
+    export HOME="/home/user"
+    export PYTHONPATH="$PYTHONPATH:$HOME/.local/lib/python2.7/site-packages"
+fi
+
+echo -e "\e[0;32m"
+
+echo "Type 'run_tutorial' to start the IML tutorial notebook."
+
+echo -e "\e[m"

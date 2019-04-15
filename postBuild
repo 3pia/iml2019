@@ -1,0 +1,2 @@
+jupyter contrib nbextension install --user
+jupyter-nbextension install rise --py --sys-prefix
