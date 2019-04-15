@@ -37,7 +37,8 @@ if has_eos:
 def eos_url(*args):
     path = os.path.normpath("/" + "/".join(str(s) for s in args[:-1]))
     files = str(args[-1])
-    return eos_url_pattern.format(urllib.quote_plus(path), urllib.quote_plus(files))
+    quote = six.moves.urllib.parse.quote
+    return eos_url_pattern.format(quote(path, safe=""), quote(files, safe=""))
 
 
 # file download helper
