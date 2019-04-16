@@ -8,7 +8,9 @@ held at the IML workshop 2019.
 import os
 import sys
 import functools
-import urllib
+import tarfile
+import tempfile
+import shutil
 
 import numpy as np
 import six
@@ -23,6 +25,10 @@ data_dir = os.path.join(base_dir, "data")
 eos_dir = "/eos/user/m/mrieger/public/iml2019"
 eos_url_pattern = "https://cernbox.cern.ch/index.php/s/xDYiSmbleT3rip4/download?path={}&files={}"
 
+# create the data dir
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
 # check if we have access to /eos or not
 has_eos = os.access(eos_dir, os.R_OK)
 print_("eos access: {}".format("✔︎" if has_eos else "✗"), flush=True)
@@ -35,8 +41,8 @@ if has_eos:
 
 # eos url with arguments
 def eos_url(*args):
-    path = os.path.normpath("/" + "/".join(str(s) for s in args[:-1]))
-    files = str(args[-1])
+    path = os.path.normpath("/" + "/".join(str(s) for s in args))
+    path, files = os.path.split(path)
     quote = six.moves.urllib.parse.quote
     return eos_url_pattern.format(quote(path, safe=""), quote(files, safe=""))
 
@@ -50,18 +56,28 @@ def download(src, dst, bar=None):
 # gets a file from eos, passed relative to eos_dir (see abpve)
 # returns the full eos path when eos is available, otherwise downloads it via cernbox and returns
 # the location of the downloaded file
-def get_file(eos_file):
+def get_file(eos_file, is_dir=False):
     eos_file = eos_file.lstrip("/")
     if has_eos:
         return os.path.join(eos_dir, eos_file)
     else:
         local_path = os.path.join(data_dir, eos_file)
         if not os.path.exists(local_path):
-            local_dir = os.path.dirname(local_path)
-            if not os.path.exists(local_dir):
-                os.makedirs(local_dir)
             print_("downloading {} from CERNBox".format(eos_file), flush=True)
-            download(eos_url(eos_file), local_path)
+
+            if is_dir:
+                tmp_dir = tempfile.mkdtemp(dir=data_dir)
+                arc_path = download(eos_url(eos_file), tmp_dir)
+                with tarfile.open(arc_path, "r") as arc:
+                    arc.extractall(data_dir)
+                shutil.rmtree(tmp_dir)
+
+            else:
+                local_dir = os.path.dirname(local_path)
+                if not os.path.exists(local_dir):
+                    os.makedirs(local_dir)
+                download(eos_url(eos_file), local_path)
+
         return local_path
 
 
