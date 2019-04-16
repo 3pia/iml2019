@@ -112,7 +112,6 @@ def plot_total_signal(fake, data):
 
 def plot_cell_number_histo(fake, data):
     """ histogram of #station values """
-    print('Plot cell number distribution')
     fig, ax = plt.subplots(1)
     ax.hist(fake, bins=np.arange(0, 55, 1), density=True, label='fake', alpha=0.5)
     ax.hist(data, bins=np.arange(0, 55, 1), density=True, label='data', alpha=0.5)
