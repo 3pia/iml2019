@@ -4,6 +4,7 @@ tensorflow
 numpy
 scipy
 pandas
+tables
 matplotlib
 scikit-learn
 lbn
