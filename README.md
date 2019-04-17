@@ -19,7 +19,7 @@ Click on the following link:
 
 You will be asked to configure the environment in a small dialog.
 
-- For the introduction tutorial, enter the following environment script path and then press the "Start my Session" button at the bottom:
+- For the introduction and the GAN tutorial, enter the following environment script path and then press the "Start my Session" button at the bottom:
 
 ```
 /eos/user/m/mrieger/public/iml2019/intro/setup.sh
@@ -30,8 +30,6 @@ You will be asked to configure the environment in a small dialog.
 ```
 /eos/user/m/mrieger/public/iml2019/lbn/setup.sh
 ```
-
-- For the GAN tutorial, just press the "Start my Session" button.
 
 
 ### 2. Binder
