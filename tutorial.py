@@ -31,7 +31,7 @@ if not os.path.exists(data_dir):
 
 # check if we have access to /eos or not
 has_eos = os.access(eos_dir, os.R_OK)
-print_("eos access: {}".format("✔︎" if has_eos else "✗"), flush=True)
+print_("eos access: {}".format("✔︎" if has_eos else "✗"))
 
 # if eos is accessible, amend sys.path to find shared software
 # otherwise, software must be installed manually (or via requirements.txt on binder)
@@ -53,17 +53,18 @@ def download(src, dst, bar=None):
     return wget.download(src, out=dst, bar=bar)
 
 
-# gets a file from eos, passed relative to eos_dir (see abpve)
+# gets a file from eos, passed relative to eos_dir (see above)
 # returns the full eos path when eos is available, otherwise downloads it via cernbox and returns
 # the location of the downloaded file
-def get_file(eos_file, is_dir=False):
+def get_file(eos_file, is_dir=False, silent=False):
     eos_file = eos_file.lstrip("/")
     if has_eos:
         return os.path.join(eos_dir, eos_file)
     else:
         local_path = os.path.join(data_dir, eos_file)
         if not os.path.exists(local_path):
-            print_("downloading {} from CERNBox".format(eos_file), flush=True)
+            if not silent:
+                print_("downloading {} from CERNBox".format(eos_file))
 
             if is_dir:
                 tmp_dir = tempfile.mkdtemp(dir=data_dir)
@@ -82,10 +83,10 @@ def get_file(eos_file, is_dir=False):
 
 
 # data loading helper
-def load_lbn_data(level="low", sorting="gen", kind="train"):
+def load_lbn_data(kind="train", sorting="gen", level="low"):
     """
     Loads an LBN dataset defined by *level* ("low", "high" or "mixed"), *sorting* ("gen" or "pt"),
-    and *kind* ("train" or "test"). The return value is dictionary-like object with two keys,
+    and *kind* ("train" or "valid"). The return value is dictionary-like object with two keys,
     "labels" and "features", which point to plain numpy arrays.
     """
     levels = ("low", "high", "mixed")
@@ -98,7 +99,7 @@ def load_lbn_data(level="low", sorting="gen", kind="train"):
         raise ValueError("unknown dataset sorting '{}', must be one of {}".format(
             sorting, ",".join(sortings)))
 
-    kinds = ("train", "test")
+    kinds = ("train", "valid")
     if kind not in kinds:
         raise ValueError("unknown dataset kind '{}', must be one of {}".format(
             kind, ",".join(kinds)))
