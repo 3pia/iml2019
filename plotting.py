@@ -1,6 +1,12 @@
+# coding: utf-8
+
+
 import matplotlib
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import numpy as np
+
+import tutorial as tut
 
 
 def is_interactive():
@@ -180,3 +186,58 @@ def plot_layer_correlations(image, datatype=''):
     axis[2].set_ylabel("Total signal layer 3")
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
+
+
+def plot_lbn_weights(weights, name, cmap="OrRd",
+        slot_names=("$b_{had}$", "$lj_{1}$", "$lj_{2}$", "$bj_{1}$", "$bj_{2}$",
+        "$lep$", r"$\nu$", "$b_{lep}$"), hide_feynman=False, **fig_kwargs):
+    # normalize weight tensor to a sum of 100 per row
+    weights = weights / np.sum(weights, axis=0).reshape((1, weights.shape[1])) * 100
+
+    # move the first row (bhad) to the bottom for illustrative purposes
+    all_but_first_row = np.array(weights[1:])
+    weights[-1] = weights[0]
+    weights[:-1] = all_but_first_row
+
+    # create the figure
+    fig_kwargs.setdefault("figsize", (5, 2.7) if hide_feynman else (10, 5))
+    fig_kwargs.setdefault("dpi", 120)
+    fig = plt.figure(**fig_kwargs)
+    ax = fig.add_subplot(1, 1 if hide_feynman else 2, 1)
+
+    # create and style the plot
+    ax.imshow(weights, cmap=cmap, vmin=0, vmax=100)
+    ax.set_title("{} weights".format(name), fontdict={"fontsize": 12})
+
+    ax.set_xlabel("LBN particle number")
+    ax.set_xticks(list(range(weights.shape[1])))
+
+    ax.set_ylabel("Input particle")
+    ax.set_yticks(list(range(weights.shape[0])))
+    ax.set_yticklabels(slot_names)
+
+    # write weights into each bin
+    for (i, j), val in np.ndenumerate(weights):
+        ax.text(j, i, int(round(weights[i, j])), fontsize=8, ha="center", va="center", color="k")
+
+    # lines to separate decay products of top quarks and the Higgs boson
+    for height in [2.5, 4.5]:
+        ax.plot((-0.5, weights.shape[1] - 0.5), (height, height), color="k", linewidth=0.5)
+
+    # ttH feynman diagram
+    if not hide_feynman:
+        ax2 = fig.add_subplot(1, 2, 2)
+        ax2.axis("off")
+
+        img_path = tut.get_file("lbn/images/feynman_ttH.png", silent=True)
+        ax2.imshow(mpimg.imread(img_path))
+
+        texts = [
+            (10, "$b_{had}$"), (68, "$lj_{1}$"), (122, "$lj_{2}$"), (176, "$bj_{1}$"),
+            (230, "$bj_{2}$"), (284, "$lep$"), (338, r"$\nu$"), (396, "$b_{lep}$"),
+        ]
+        for y, txt in texts:
+            ax2.text(400, y, txt, fontdict={"color": "red"})
+
+    # return figure and axes
+    return fig, ax
