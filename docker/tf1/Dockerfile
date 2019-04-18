@@ -16,7 +16,8 @@ RUN apt-get install -y wget nano less htop git
 # python software
 RUN pip install --upgrade pip
 RUN pip install --upgrade ipython jupyter
-RUN pip install --upgrade git+https://github.com/riga/LBN.git scinum wget matplotlib scikit-learn pandas tables
+RUN pip install --upgrade scinum wget matplotlib scikit-learn pandas tables
+RUN pip install --upgrade --no-deps git+https://github.com/riga/LBN.git
 RUN pip install --upgrade jupyter_contrib_nbextensions RISE
 
 # create a custom home directory
