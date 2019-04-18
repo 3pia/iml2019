@@ -4,6 +4,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from sklearn.metrics import roc_curve, roc_auc_score
 import numpy as np
 
 import tutorial as tut
@@ -188,16 +189,123 @@ def plot_layer_correlations(image, datatype=''):
     plt.show()
 
 
-def plot_lbn_weights(weights, name, cmap="OrRd",
+def plot_lbn_feature(array, labels, xlabel="Variable", limits=None, bins=25, **fig_kwargs):
+    fig_kwargs.setdefault("figsize", (3.5, 3.5))
+    fig_kwargs.setdefault("dpi", 120)
+    fig = plt.figure(**fig_kwargs)
+    ax = fig.add_subplot(1, 1, 1)
+
+    # basic plot setup
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Normalized entries")
+    if limits:
+        ax.set_xlim(*limits)
+        filter_idxs = (array >= limits[0]) & (array < limits[1])
+        array = array[filter_idxs]
+        labels = labels[filter_idxs]
+    ax.tick_params(axis="both", direction="in")
+
+    # draw histograms
+    ax.hist(array[labels[:, 1] == 1], label=r"$t\bar{t}H$", edgecolor="#1167bd", bins=bins,
+        histtype="step", density=True)
+    ax.hist(array[labels[:, 1] == 0], label=r"$t\bar{t}b\bar{b}$", edgecolor="#c62817", bins=bins,
+        histtype="step", density=True)
+
+    # legend
+    leg = ax.legend(loc="upper right", fontsize="small")
+    leg.get_frame().set_linewidth(0.0)
+
+    return fig, ax
+
+
+def plot_lbn_outputs(title, pred_valid, labels_valid, pred_train=None, labels_train=None,
+        **fig_kwargs):
+    fig_kwargs.setdefault("dpi", 120)
+    fig = plt.figure(**fig_kwargs)
+    ax = fig.add_subplot(1, 1, 1)
+
+    # common hist parameters
+    common = dict(range=(0, 1), bins=40, histtype="step", density=True)
+
+    # draw histograms
+
+    ax.hist(pred_valid[labels_valid == 1], edgecolor="#1167bd", label=r"$t\bar{t}H$ (valid)",
+        **common)
+    ax.hist(pred_valid[labels_valid == 0], edgecolor="#c62817", label=r"$t\bar{t}b\bar{b}$ (valid)",
+        **common)
+
+    if pred_train is not None and labels_train is not None:
+        ax.hist(pred_train[labels_train == 1], edgecolor="#022550", linestyle="--",
+            label=r"$t\bar{t}H$ (train)", **common)
+
+        ax.hist(pred_train[labels_train == 0], edgecolor="#560809", linestyle="--",
+            label=r"$t\bar{t}b\bar{b}$ (train)", **common)
+
+    # general style
+    ax.set_title(title)
+    ax.tick_params(axis="both", direction="in")
+    ax.set_xlabel("Network output")
+    ax.set_ylabel("Normalized entries")
+    ax.set_xlim(0, 1)
+
+    # legend
+    leg = ax.legend(loc="upper center", fontsize="small")
+    leg.get_frame().set_linewidth(0.0)
+
+    return fig, ax
+
+
+def plot_lbn_rocs(*data, **fig_kwargs):
+    fig_kwargs.setdefault("dpi", 120)
+    fig = plt.figure(**fig_kwargs)
+    ax = fig.add_subplot(1, 1, 1)
+
+    # basic plot setup
+    ax.plot([0, 1], [1, 0], color="black", linestyle="--")
+    ax.set_title("ROC curves")
+    ax.set_xlabel("Signal Efficiency")
+    ax.set_ylabel("Background Rejection")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.tick_params(axis="both", direction="in")
+
+    # add data
+    for d in data:
+        auc = roc_auc_score(d["labels"], d["prediction"])
+        label = "{} ({:.3f})".format(d.get("label", "ROC"), auc)
+        roc = roc_curve(d["labels"][:, 1], d["prediction"][:, 1])
+        fpr, tpr, _ = roc
+        ax.plot(tpr, 1 - fpr, label=label, color=d.get("color", "#118730"))
+
+    # legend
+    leg = ax.legend(loc="lower left", fontsize="small")
+    leg.get_frame().set_linewidth(0.0)
+
+    return fig, ax
+
+
+def plot_lbn_weights(weights, name, cmap="OrRd", sorting="gen",
         slot_names=("$b_{had}$", "$lj_{1}$", "$lj_{2}$", "$bj_{1}$", "$bj_{2}$",
         "$lep$", r"$\nu$", "$b_{lep}$"), hide_feynman=False, **fig_kwargs):
     # normalize weight tensor to a sum of 100 per row
     weights = weights / np.sum(weights, axis=0).reshape((1, weights.shape[1])) * 100
 
-    # move the first row (bhad) to the bottom for illustrative purposes
-    all_but_first_row = np.array(weights[1:])
-    weights[-1] = weights[0]
-    weights[:-1] = all_but_first_row
+    if sorting == "gen":
+        slot_names = [
+            "$b_{had}$", "$lj_{1}$", "$lj_{2}$", "$bj_{1}$", "$bj_{2}$", "$lep$", r"$\nu$",
+            "$b_{lep}$",
+        ]
+
+        # move the second row (blep) to the bottom for illustrative purposes
+        reorder_ixs = np.argsort([0, 7, 1, 2, 3, 4, 5, 6])
+        weights = weights[reorder_ixs]
+    elif sorting == "pt":
+        slot_names = [
+            "$jet_{1}$", "$jet_{2}$", "$jet_{3}$", "$jet_{4}$", "$jet_{5}$", "$jet_{6}$", "$lep$",
+            r"$\nu$",
+        ]
+    else:
+        raise ValueError("unknown sorting value, must be 'gen' or 'pt")
 
     # create the figure
     fig_kwargs.setdefault("figsize", (5, 2.7) if hide_feynman else (10, 5))
@@ -232,12 +340,35 @@ def plot_lbn_weights(weights, name, cmap="OrRd",
         img_path = tut.get_file("lbn/images/feynman_ttH.png", silent=True)
         ax2.imshow(mpimg.imread(img_path))
 
-        texts = [
-            (10, "$b_{had}$"), (68, "$lj_{1}$"), (122, "$lj_{2}$"), (176, "$bj_{1}$"),
-            (230, "$bj_{2}$"), (284, "$lep$"), (338, r"$\nu$"), (396, "$b_{lep}$"),
-        ]
-        for y, txt in texts:
-            ax2.text(400, y, txt, fontdict={"color": "red"})
+        ys = [10, 68, 122, 176, 230, 284, 338, 396]
+        for y, slot in zip(ys, slot_names):
+            ax2.text(400, y, slot, fontdict={"color": "red"})
 
     # return figure and axes
     return fig, ax
+
+
+def get_lbn_features(lbn_layer, vectors):
+    # somewhat hacky, but sth seems to be broken in TF 2 alpha
+    import tensorflow as tf
+    from lbn import LBNLayer
+
+    class DummyModel(tf.keras.models.Model):
+
+        def __init__(self, lbn_layer, *args, **kwargs):
+            super(DummyModel, self).__init__(*args, **kwargs)
+
+            l = lbn_layer.lbn
+            self.lbn_layer = LBNLayer(
+                n_particles=l.n_particles,
+                n_restframes=l.n_restframes,
+                boost_mode=l.boost_mode,
+                particle_weights=lbn_layer.particle_weights,
+                restframe_weights=lbn_layer.restframe_weights,
+                features=lbn_layer.feature_names,
+            )
+
+        def call(self, vectors):
+            return self.lbn_layer(vectors)
+
+    return DummyModel(lbn_layer)(vectors).numpy()
