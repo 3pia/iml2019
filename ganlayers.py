@@ -57,21 +57,23 @@ def _conv_sn(conv, inputs, filters, kernel_size, name,
     input_shape = inputs.get_shape().as_list()
     c_axis, h_axis, w_axis = 3, 1, 2  # channels last
     input_dim = input_shape[c_axis]
+    kernel_h, kernel_w = kernel_size
+    stride_h, stride_w = strides
     with tf.variable_scope(name):
         if transposed is True:
             kernel_shape = kernel_size + (filters, input_dim)
             kernel = tf.get_variable('kernel', shape=kernel_shape, initializer=kernel_initializer)
             height, width = input_shape[h_axis], input_shape[w_axis]
-            kernel_h, kernel_w = kernel_size
-            stride_h, stride_w = strides
             out_height = deconv_output_length(height, kernel_h, padding, stride_h)
             out_width = deconv_output_length(width, kernel_w, padding, stride_w)
             output_shape = (input_shape[0], out_height, out_width, filters)
-            outputs = conv(inputs, spectral_norm(kernel, use_gamma=use_gamma, factor=factor), tf.stack(output_shape), strides=(1, *strides, 1), padding=padding.upper())
+            outputs = conv(inputs, spectral_norm(kernel, use_gamma=use_gamma, factor=factor),
+            tf.stack(output_shape), strides=(1, stride_h, stride_w, 1), padding=padding.upper())
         else:
             kernel_shape = kernel_size + (input_dim, filters)
             kernel = tf.get_variable('kernel', shape=kernel_shape, initializer=kernel_initializer)
-            outputs = conv(inputs, spectral_norm(kernel, use_gamma=use_gamma, factor=factor), strides=(1, *strides, 1), padding=padding.upper())
+            outputs = conv(inputs, spectral_norm(kernel, use_gamma=use_gamma, factor=factor),
+                           strides=(1, stride_h, stride_w, 1), padding=padding.upper())
         if use_bias is True:
             bias = tf.get_variable('bias', shape=(filters,), initializer=bias_initializer)
             outputs = tf.nn.bias_add(outputs, bias)
@@ -92,7 +94,8 @@ def dense_sn(inputs, units, name,
     input_shape = inputs.get_shape().as_list()
 
     with tf.variable_scope(name):
-        kernel = tf.get_variable('kernel', shape=(input_shape[-1], units), initializer=kernel_initializer)
+        kernel = tf.get_variable('kernel', shape=(
+            input_shape[-1], units), initializer=kernel_initializer)
         outputs = tf.matmul(inputs, spectral_norm(kernel, use_gamma=use_gamma, factor=factor))
         if use_bias is True:
             bias = tf.get_variable('bias', shape=(units,), initializer=bias_initializer)
